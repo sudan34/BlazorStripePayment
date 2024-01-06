@@ -1,0 +1,19 @@
+﻿@page "/payment-success"
+@using Stripe.Checkout
+<h3>Payment Success</h3>
+<p>Hi @_customerName,</p>
+<p>Thank you for makeing payment</p>
+
+@code {
+    [SupplyParameterFromQuery(Name = "session-id")]
+    public string CheckoutSessionId { get; set; }
+    private string _customerName = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        var sessionService = new SessionService();
+        var session = await sessionService.GetAsync(CheckoutSessionId);
+
+        _customerName = session.CustomerDetails.Name;
+    }
+
+}

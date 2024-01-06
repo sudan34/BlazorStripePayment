@@ -1,0 +1,79 @@
+﻿@page "/"
+@using Stripe.Checkout
+@inject NavigationManager NavigationManager
+<PageTitle>Blazor Stripe Payment</PageTitle>
+
+<h1>Payment integrate with Blazor SSr</h1>
+
+<hr />
+<h3>Products</h3>
+<ul>
+    @foreach (var p in _productsIncart)
+    {
+        <li>
+            @p.Id - @p.Name - @p.Price.ToString("c")
+        </li>
+    }
+</ul>
+<hr>
+<label>Total Amount: @_productsIncart.Sum(p => p.Price).ToString("c")</label>
+<hr />
+<form method="post" @formname="checkout-form" @onsubmit="CheckoutAsync">
+    <AntiforgeryToken />
+    <button type="submit" class="btn-sm btn-primary">Pay Now</button>
+</form>
+
+@code {
+    private Product[] _productsIncart = [];
+    protected override void OnInitialized()
+    {
+        _productsIncart = [
+            new Product(1, "Product 1", 15),
+    new Product(1, "Product 2", 27.5m),
+    new Product(1, "Product 3", 11.23m),
+    new Product(1, "Product 4", 10.8m),
+    new Product(1, "Product 5", 25)
+        ];
+    }
+
+    private async Task CheckoutAsync()
+    {
+        var domain = NavigationManager.BaseUri.TrimEnd('/'); 
+        var lineItems = _productsIncart.Select(p => new SessionLineItemOptions
+            {
+                Quantity = 1,
+               // Price = p.Price.ToString(),
+                PriceData = new SessionLineItemPriceDataOptions
+                {
+                    Currency = "npr",
+                    UnitAmountDecimal = p.Price * 100,
+                    ProductData = new SessionLineItemPriceDataProductDataOptions
+                    {
+                        Name = p.Name
+                    }
+                }
+            }).ToList();
+        var options = new SessionCreateOptions
+            {
+                LineItems = lineItems,
+                Mode = "payment",
+                SuccessUrl = domain + "/payment-success?session-id={CHECKOUT_SESSION_ID}",
+                CancelUrl = domain,
+            };
+        
+        var service = new SessionService();
+        Session session = await service.CreateAsync(options);
+
+        NavigationManager.NavigateTo(session.Url);
+        // Response.Headers.Add("Location", session.Url);
+        // return new StatusCodeResult(303);
+
+    }
+    class Product
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public decimal Price { get; set; }
+        public Product(int id, string name, decimal price) => (Id, Name, Price) = (id, name, price);
+    }
+}
